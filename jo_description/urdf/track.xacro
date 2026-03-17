@@ -233,6 +233,120 @@
 
 
 
+        <link name="${side}_cover">
+            <visual name="cylinder_1">
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <cylinder radius="0.06" length="0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+            <visual name="cylinder_2">
+                <origin xyz="0.0 0.74 0" rpy="0 0 0"/>
+                <geometry>
+                    <cylinder radius="0.06" length="0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+            <visual name="cylinder_3">
+                <origin xyz="-0.25 0.35 0" rpy="0 0 0"/>
+                <geometry>
+                    <cylinder radius="0.045" length="0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+
+            <visual name="cylinder_4">
+                <origin xyz="-0.11 0.85 0" rpy="0 0 0"/>
+                <geometry>
+                    <cylinder radius="0.06" length="0.02"/>
+                </geometry>
+                <material name="red"/>
+            </visual>
+
+            <visual name="box_2">
+                <origin xyz="-0.13 0.21 0" rpy="0 0 ${pi/5.3}"/>
+                <geometry>
+                    <box size="0.1 0.43 0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+
+            <visual name="box_4">
+                <origin xyz="-0.04 0.77 0" rpy="0 0 ${pi/4}"/>
+                <geometry>
+                    <box size="0.1 0.18 0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+            <visual name="box_5">
+                <origin xyz="-0.05 0.45 0" rpy="0 0 0.0"/>
+                <geometry>
+                    <box size="0.2 0.6 0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+            <visual name="box_6">
+                <origin xyz="-0.16 0.45 0" rpy="0 0 0.0"/>
+                <geometry>
+                    <box size="0.1 0.3 0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+            <visual name="box_3">
+                <origin xyz="-0.17 0.61 0" rpy="0 0 ${-pi/12}"/>
+                <geometry>
+                    <box size="0.09 0.5 0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+            <visual name="box">
+                <origin xyz="0.0 0.35 0" rpy="0 0 0"/>
+                <geometry>
+                    <box size="0.1 0.74 0.02"/>
+                </geometry>
+                <material name="white"/>
+            </visual>
+
+
+            <collision>
+                <geometry>
+                    <box size="${top2front_upper_length} ${track_width} 0.02"/>
+                </geometry>
+                <material name="orange"/>                
+            </collision>
+        </link>
+
+
+        <joint name="back_${side}_roller2${side}_cover" type="fixed">
+            <parent link="back_${side}_roller"/>
+            <child link="${side}_cover"/>
+            <origin xyz="0.0 ${(track_width/2) * (1 if side == 'left' else -1)} 0.0" rpy="${pi/2} 0.0 0" />
+        </joint>
+
+
+
+
+
+
+
+
+
+
         <gazebo reference="base2back_${side}_roller">
             <preserveFixedJoint>true</preserveFixedJoint>
         </gazebo>

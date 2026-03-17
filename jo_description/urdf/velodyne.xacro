@@ -58,6 +58,23 @@
                 </plugin>
             </sensor>
         </gazebo>
+
+
+        <link name="velodyne_holder">
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <box size="${lidar_len_rad*2} ${lidar_len_h*2} 0.09"/>
+                </geometry>
+                <material name="black"/>
+            </visual>
+        </link>
+
+        <joint name="lidar2holder" type="fixed">
+            <parent link="velodyne"/>
+            <child link="velodyne_holder"/>
+            <origin xyz="0 0 ${-lidar_len_h/2 - 0.09/2}" rpy="0 0 0"/>
+        </joint>
         
     </xacro:macro>
 
