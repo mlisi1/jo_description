@@ -23,6 +23,17 @@ RUN apt update -y \
     ros-${DISTRO}-realsense2-camera \
     ros-${DISTRO}-realsense2-description \
     ros-${DISTRO}-twist-mux \
+    ros-${DISTRO}-nav2-common \
+    ros-${DISTRO}-nav2-controller \
+    ros-${DISTRO}-nav2-smoother \
+    ros-${DISTRO}-nav2-planner \
+    ros-${DISTRO}-nav2-behaviors \
+    ros-${DISTRO}-nav2-bt-navigator \
+    ros-${DISTRO}-nav2-waypoint-follower \
+    ros-${DISTRO}-nav2-velocity-smoother \
+    ros-${DISTRO}-nav2-lifecycle-manager \
+    ros-${DISTRO}-nav2-dwb-controller \
+    ros-${DISTRO}-nav2-navfn-planner \
     python3-rosdep \
     software-properties-common \
     ca-certificates \
@@ -78,6 +89,8 @@ RUN cd RGLGazeboPlugin \
     && echo "export GZ_SIM_SYSTEM_PLUGIN_PATH=/opt/ros/humble/lib/" >> ~/.bashrc \
     && echo "export RGL_PATTERNS_DIR=`pwd`/lidar_patterns" >> ~/.bashrc \
     && echo "export GZ_SIM_SYSTEM_PLUGIN_PATH=`pwd`/install/RGLServerPlugin:$GZ_SIM_SYSTEM_PLUGIN_PATH" >> ~/.bashrc \
-    && echo "export GZ_GUI_PLUGIN_PATH=`pwd`/install/RGLVisualize:$GZ_GUI_PLUGIN_PATH" >> ~/.bashrc 
+    && echo "export GZ_GUI_PLUGIN_PATH=`pwd`/install/RGLVisualize:$GZ_GUI_PLUGIN_PATH" >> ~/.bashrc \
+    && echo "export GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/home/ros/src/jo_description/worlds/external/worlds/" >> ~/.bashrc \
+    && echo "export GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/home/ros/src/jo_description/worlds/external/models/" >> ~/.bashrc 
 
 ENTRYPOINT ["/entrypoint.sh"]
