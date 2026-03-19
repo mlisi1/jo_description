@@ -34,6 +34,7 @@ RUN apt update -y \
     ros-${DISTRO}-nav2-lifecycle-manager \
     ros-${DISTRO}-nav2-dwb-controller \
     ros-${DISTRO}-nav2-navfn-planner \
+    ros-${DISTRO}-nav2-rviz-plugins \
     python3-rosdep \
     software-properties-common \
     ca-certificates \

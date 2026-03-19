@@ -56,6 +56,26 @@ def generate_launch_description():
     #              https://github.com/ros2/launch_ros/issues/56
     remappings = [('/tf', 'tf'),
                   ('/tf_static', 'tf_static')]
+    
+
+    rviz_arg = DeclareLaunchArgument('rviz', default_value='false', description='Whether to launch RViz')
+
+    rviz_config = os.path.join(
+        bringup_dir,
+        'rviz',
+        'navigation.rviz'
+        )
+    
+
+    rviz = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='screen',
+        arguments=['-d', rviz_config],
+        parameters=[{'use_sim_time': True}],
+        condition=IfCondition(LaunchConfiguration('rviz'))
+    )
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
@@ -248,23 +268,22 @@ def generate_launch_description():
         ],
     )
 
-    # Create the launch description and populate
-    ld = LaunchDescription()
 
-    # Set environment variables
-    ld.add_action(stdout_linebuf_envvar)
+    
 
-    # Declare the launch options
-    ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_use_sim_time_cmd)
-    ld.add_action(declare_params_file_cmd)
-    ld.add_action(declare_autostart_cmd)
-    ld.add_action(declare_use_composition_cmd)
-    ld.add_action(declare_container_name_cmd)
-    ld.add_action(declare_use_respawn_cmd)
-    ld.add_action(declare_log_level_cmd)
-    # Add the actions to launch all of the navigation nodes
-    ld.add_action(load_nodes)
-    ld.add_action(load_composable_nodes)
 
-    return ld
+    return LaunchDescription([
+        rviz_arg,
+        stdout_linebuf_envvar,
+        declare_namespace_cmd,
+        declare_use_sim_time_cmd,
+        declare_params_file_cmd,
+        declare_autostart_cmd,
+        declare_use_composition_cmd,
+        declare_container_name_cmd,
+        declare_use_respawn_cmd,
+        declare_log_level_cmd,
+        load_nodes,
+        load_composable_nodes,
+        rviz,
+    ])
