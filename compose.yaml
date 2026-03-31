@@ -30,6 +30,7 @@ services:
       - __NV_PRIME_RENDER_OFFLOAD=1 
       - __GLX_VENDOR_LIBRARY_NAME=nvidia
       - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - XAUTHORITY=/tmp/.Xauthority
     group_add:
       - dialout
 
