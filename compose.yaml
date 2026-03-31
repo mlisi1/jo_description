@@ -20,6 +20,7 @@ services:
               capabilities: [gpu]
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ~/.Xauthority:/tmp/.Xauthority:ro
       - /dev:/dev
       - ./jo_description:/home/ros/src/jo_description
     environment:
