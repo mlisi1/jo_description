@@ -2,421 +2,219 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-
+    <!-- ═══════════════════════════════════════════
+         TRACK GEOMETRY FROM CAD (CAD frame, see robot_core.xacro)
+         Every wheel is given by its centre (x, z) and the OUTER radius of the
+         belt wrapped around it (wheel radius + belt thickness).
+         All track link frames are axis-aligned with base_link, so their Y axis
+         (used by the TrackController for the friction direction) is the
+         robot's +Y, as in the previous model.
+    ═══════════════════════════════════════════ -->
     <xacro:property name="PI" value="3.141592" />
-    <xacro:property name="track_width" value="0.15" />
-    <xacro:property name="front_roller_radius" value="0.09" />
-    <xacro:property name="front_upper_roller_radius" value="0.09" />
-    <xacro:property name="upper_roller_radius" value="0.045" />
-    <xacro:property name="back_roller_radius" value="0.09" />
-    <xacro:property name="back2front_length" value="0.74" />
-    <xacro:property name="front2upper_roller_length" value="0.16" />
-    <xacro:property name="belt_thickness" value="0.05" />
-    <xacro:property name="back2top_roller_x" value="0.35" />
-    <xacro:property name="back2top_roller_y" value="0.27" />
-    <xacro:property name="back2top_length" value="0.43" />
-    <xacro:property name="top2front_upper_length" value="0.53" />
-    <xacro:property name="back_roller2chassis" value="0.11" />
+    <xacro:property name="track_width" value="0.15" />        <!-- CAD y = 0.225 .. 0.375 -->
+    <xacro:property name="track_y" value="0.30" />            <!-- track centreline -->
+    <xacro:property name="track_separation" value="${2*track_y}" />
+    <xacro:property name="belt_thickness" value="0.038" />
+
+    <!-- rear drive sprocket (RUOTA_0) -->
+    <xacro:property name="back_roller_x" value="-0.451" />
+    <xacro:property name="back_roller_z" value="0.127" />
+    <xacro:property name="back_roller_radius" value="0.089" />
+    <!-- rear road wheel (RUOTA_4) -->
+    <xacro:property name="rear_wheel_x" value="-0.322" />
+    <xacro:property name="rear_wheel_z" value="0.082" />
+    <xacro:property name="rear_wheel_radius" value="0.082" />
+    <!-- front road wheel (RUOTA_3) -->
+    <xacro:property name="front_roller_x" value="0.314" />
+    <xacro:property name="front_roller_z" value="0.082" />
+    <xacro:property name="front_roller_radius" value="0.082" />
+    <!-- front idler (RUOTA_2) -->
+    <xacro:property name="front_upper_roller_x" value="0.409" />
+    <xacro:property name="front_upper_roller_z" value="0.214" />
+    <xacro:property name="front_upper_roller_radius" value="0.081" />
+    <!-- top support roller (RUOTA_1) -->
+    <xacro:property name="upper_roller_x" value="-0.087" />
+    <xacro:property name="upper_roller_z" value="0.331" />
+    <xacro:property name="upper_roller_radius" value="0.070" />
+
+    <xacro:property name="track_link_mass" value="0.01" />
+
+    <!-- Roller link (cylinder along Y) -->
+    <xacro:macro name="track_roller" params="name radius inertial:=true">
+        <link name="${name}">
+            <collision>
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+                <geometry>
+                    <cylinder radius="${radius}" length="${track_width}"/>
+                </geometry>
+            </collision>
+            <xacro:if value="${inertial}">
+                <xacro:inertial_cylinder mass="${track_link_mass}" radius="${radius}" length="${track_width}">
+                    <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+                </xacro:inertial_cylinder>
+            </xacro:if>
+        </link>
+    </xacro:macro>
+
+    <!-- Straight belt segment between two wheels (x1,z1,r1) -> (x2,z2,r2), in the CAD frame.
+         The box outer face lies on the external tangent of the two wheels.
+         s = -1: tangent below the wheels (ground side), s = +1: above.
+         px, pz: CAD position of the parent link. -->
+    <xacro:macro name="track_belt" params="name parent joint px pz x1 z1 r1 x2 z2 r2 s inertial:=true">
+        <xacro:property name="b_th" value="${atan2(z2 - z1, x2 - x1) + s*acos((r1 - r2)/sqrt((x2 - x1)**2 + (z2 - z1)**2))}"/>
+        <xacro:property name="b_x1" value="${x1 + r1*cos(b_th)}"/>
+        <xacro:property name="b_z1" value="${z1 + r1*sin(b_th)}"/>
+        <xacro:property name="b_x2" value="${x2 + r2*cos(b_th)}"/>
+        <xacro:property name="b_z2" value="${z2 + r2*sin(b_th)}"/>
+        <xacro:property name="b_len" value="${sqrt((b_x2 - b_x1)**2 + (b_z2 - b_z1)**2)}"/>
+
+        <link name="${name}">
+            <collision>
+                <geometry>
+                    <box size="${b_len} ${track_width} ${belt_thickness}"/>
+                </geometry>
+            </collision>
+            <xacro:if value="${inertial}">
+                <xacro:inertial_box mass="${track_link_mass}" x="${b_len}" y="${track_width}" z="${belt_thickness}">
+                    <origin xyz="0 0 0" rpy="0 0 0"/>
+                </xacro:inertial_box>
+            </xacro:if>
+        </link>
+
+        <joint name="${joint}" type="fixed">
+            <parent link="${parent}"/>
+            <child link="${name}"/>
+            <origin xyz="${(b_x1 + b_x2)/2 - belt_thickness/2*cos(b_th) - px} 0 ${(b_z1 + b_z2)/2 - belt_thickness/2*sin(b_th) - pz}"
+                    rpy="0 ${-atan2(b_z2 - b_z1, b_x2 - b_x1)} 0"/>
+        </joint>
+    </xacro:macro>
+
+    <!-- Registers a link as a moving track surface for gz-sim -->
+    <xacro:macro name="track_surface" params="link joint">
+        <gazebo reference="${joint}">
+            <preserveFixedJoint>true</preserveFixedJoint>
+        </gazebo>
+        <gazebo>
+            <plugin filename="gz-sim-track-controller-system"
+                    name="gz::sim::systems::TrackController">
+                <link>${link}</link>
+                <debug>0</debug>
+            </plugin>
+        </gazebo>
+        <gazebo reference="${link}">
+            <self_collide>false</self_collide>
+        </gazebo>
+    </xacro:macro>
 
 
     <xacro:macro name="track" params="side">
+        <xacro:property name="sy" value="${1 if side == 'left' else -1}"/>
 
+        <!-- Rear sprocket: root of the track sub-tree, carries the track visuals -->
         <link name="back_${side}_roller">
-            <visual>
-                <origin xyz="0 0 0" rpy="${-pi/2} ${-pi/2} 0"/>
-                <geometry>
-                    <cylinder radius="${back_roller_radius}" length="${track_width}"/>                    
-                </geometry>
-                <material name="black"/>                
-            </visual>    
+            <xacro:cad_mesh file="track_${side}.stl"  material="dark"      x="${back_roller_x}" y="${sy*track_y}" z="${back_roller_z}"/>
+            <xacro:cad_mesh file="wheels_${side}.stl" material="dark_gray" x="${back_roller_x}" y="${sy*track_y}" z="${back_roller_z}"/>
             <collision>
-                <origin xyz="0 0 0" rpy="${-pi/2} ${-pi/2} 0"/>
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
                 <geometry>
                     <cylinder radius="${back_roller_radius}" length="${track_width}"/>
                 </geometry>
-                <material name="orange"/>                
-            </collision>     
-            <xacro:inertial_cylinder mass="0.01" radius="${back_roller_radius}" length="${track_width}">
-                    <origin xyz="0 0 0" rpy="${-pi/2} ${-pi/2} 0"/>
-            </xacro:inertial_cylinder>    
+            </collision>
+            <xacro:inertial_cylinder mass="${track_link_mass}" radius="${back_roller_radius}" length="${track_width}">
+                <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+            </xacro:inertial_cylinder>
         </link>
 
         <joint name="base2back_${side}_roller" type="fixed">
             <parent link="base_link"/>
             <child link="back_${side}_roller"/>
-            <origin xyz="${-chassis_length/2 - back_roller2chassis + back_roller_radius} ${(track_width/2 + chassis_width/2) * (1 if side == 'left' else -1)} ${-chassis_height}" rpy="${pi/2} ${pi/2} ${pi/2}" />
+            <origin xyz="${back_roller_x - cad2base_x} ${sy*track_y} ${back_roller_z - cad2base_z}" rpy="0 0 0"/>
         </joint>
 
 
-        <link name="front_${side}_roller">
-            <visual>
-                <origin xyz="0 0 0" rpy="${-pi/2} 0 0"/>
-                <geometry>
-                    <cylinder radius="${front_roller_radius}" length="${track_width}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual> 
-            <collision>
-                <origin xyz="0 0 0" rpy="${-pi/2} 0 0"/>
-                <geometry>
-                    <cylinder radius="${front_roller_radius}" length="${track_width}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>    
-            <xacro:inertial_cylinder mass="0.01" radius="${front_roller_radius}" length="${track_width}">
-                    <origin xyz="0 0 0" rpy="${-pi/2} 0 0"/>
-            </xacro:inertial_cylinder>   
-        </link>
-
+        <!-- Front road wheel -->
+        <xacro:track_roller name="front_${side}_roller" radius="${front_roller_radius}"/>
         <joint name="back_${side}_roller2front_${side}_roller" type="fixed">
             <parent link="back_${side}_roller"/>
             <child link="front_${side}_roller"/>
-            <origin xyz="0.0 0.0 ${back2front_length}" rpy="0 0 0" />
+            <origin xyz="${front_roller_x - back_roller_x} 0 ${front_roller_z - back_roller_z}" rpy="0 0 0"/>
         </joint>
 
 
-
-        <link name="front_${side}_upper_roller">
-            <visual>
-                <origin xyz="0 0 0" rpy="${-pi/2} ${-pi/4 - pi/3 - 17.7*pi/180} 0"/>
-                <geometry>
-                    <cylinder radius="${front_upper_roller_radius}" length="${track_width}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual>        
-            <collision>
-                <origin xyz="0 0 0" rpy="${-pi/2} ${-pi/4 - pi/3 - 17.7*pi/180} 0"/>
-                <geometry>
-                    <cylinder radius="${front_upper_roller_radius}" length="${track_width}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>        
-        </link>
-
+        <!-- Front idler -->
+        <xacro:track_roller name="front_${side}_upper_roller" radius="${front_upper_roller_radius}" inertial="false"/>
         <joint name="front_${side}_roller2front_${side}_upper_roller" type="fixed">
             <parent link="front_${side}_roller"/>
             <child link="front_${side}_upper_roller"/>
-            <origin xyz="${-front2upper_roller_length * 0.7} 0.0 ${front2upper_roller_length * 0.7}" rpy="0 ${pi/4 + pi/3 + 17.7*pi/180} 0" />
+            <origin xyz="${front_upper_roller_x - front_roller_x} 0 ${front_upper_roller_z - front_roller_z}" rpy="0 0 0"/>
         </joint>
 
 
-        <link name="${side}_bottom_belt">
-            <visual>
-                <geometry>
-                    <box size="${belt_thickness} ${track_width} ${back2front_length}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual>        
-            <collision>
-                <geometry>
-                    <box size="${belt_thickness} ${track_width} ${back2front_length}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>     
-            <xacro:inertial_box mass="0.01" x="${belt_thickness}" y="${track_width}" z="${back2front_length}">
-                    <origin xyz="0 0 0" rpy="0 0 0"/>
-            </xacro:inertial_box>   
-        </link>
-
-
-        <joint name="back_${side}_roller2${side}_bottom_belt" type="fixed">
-            <parent link="back_${side}_roller"/>
-            <child link="${side}_bottom_belt"/>
-            <origin xyz="0.065 0 ${back2front_length/2}" rpy="0 0 0" />
-        </joint>
-
-
-
-
-        <link name="${side}_front_bottom_belt">
-            <visual>
-                <origin xyz="0 0 0" rpy="0 ${-pi/4} 0"/>
-                <geometry>
-                    <box size="${belt_thickness} ${track_width} ${front2upper_roller_length}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual> 
-            <collision>
-                <origin xyz="0 0 0" rpy="0 ${-pi/4} 0"/>
-                <geometry>
-                    <box size="${belt_thickness} ${track_width} ${front2upper_roller_length}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>  
-            <xacro:inertial_box mass="0.01" x="${belt_thickness}" y="${track_width}" z="${front2upper_roller_length}">
-                    <origin xyz="0 0 0" rpy="0 ${-pi/4} 0"/>
-            </xacro:inertial_box>       
-        </link>
-
-
-        <joint name="back_${side}_roller2${side}_front_bottom_belt" type="fixed">
-            <parent link="front_${side}_roller"/>
-            <child link="${side}_front_bottom_belt"/>
-            <origin xyz="0.0 0.0 ${front2upper_roller_length/2}" rpy="0 0 0" />
-        </joint>
-
-
-
-
-
-        <link name="${side}_top_roller">
-            <visual>
-                <origin xyz="0 0 0" rpy="${-pi/2} ${pi/6 + 2*pi/180} 0"/>
-                <geometry>
-                    <cylinder radius="${upper_roller_radius}" length="${track_width}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual>   
-            <collision>
-                <origin xyz="0 0 0" rpy="${-pi/2} ${pi/6 + 2*pi/180} 0"/>
-                <geometry>
-                    <cylinder radius="${upper_roller_radius}" length="${track_width}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>        
-        </link>
-
+        <!-- Top support roller -->
+        <xacro:track_roller name="${side}_top_roller" radius="${upper_roller_radius}" inertial="false"/>
         <joint name="back_${side}_roller2${side}_top_roller" type="fixed">
             <parent link="back_${side}_roller"/>
             <child link="${side}_top_roller"/>
-            <origin xyz="${-back2top_roller_y} 0 ${back2top_roller_x}" rpy="0 ${-pi/6 - 2*pi/180} 0" />
+            <origin xyz="${upper_roller_x - back_roller_x} 0 ${upper_roller_z - back_roller_z}" rpy="0 0 0"/>
         </joint>
 
 
+        <!-- Ground contact: rear road wheel -> front road wheel -->
+        <xacro:track_belt name="${side}_bottom_belt" parent="back_${side}_roller"
+                          joint="back_${side}_roller2${side}_bottom_belt"
+                          px="${back_roller_x}" pz="${back_roller_z}"
+                          x1="${rear_wheel_x}" z1="${rear_wheel_z}" r1="${rear_wheel_radius}"
+                          x2="${front_roller_x}" z2="${front_roller_z}" r2="${front_roller_radius}" s="-1"/>
 
-        <link name="${side}_back_top_belt">
-            <visual>
-                <geometry>
-                    <box size="${belt_thickness} ${track_width} ${back2top_length}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual>   
-            <collision>
-                <geometry>
-                    <box size="${belt_thickness} ${track_width} ${back2top_length}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>        
-        </link>
+        <!-- Rear incline: sprocket -> rear road wheel -->
+        <xacro:track_belt name="${side}_back_bottom_belt" parent="back_${side}_roller"
+                          joint="back_${side}_roller2${side}_back_bottom_belt"
+                          px="${back_roller_x}" pz="${back_roller_z}"
+                          x1="${back_roller_x}" z1="${back_roller_z}" r1="${back_roller_radius}"
+                          x2="${rear_wheel_x}" z2="${rear_wheel_z}" r2="${rear_wheel_radius}" s="-1"/>
 
+        <!-- Front incline: front road wheel -> front idler -->
+        <xacro:track_belt name="${side}_front_bottom_belt" parent="front_${side}_roller"
+                          joint="back_${side}_roller2${side}_front_bottom_belt"
+                          px="${front_roller_x}" pz="${front_roller_z}"
+                          x1="${front_roller_x}" z1="${front_roller_z}" r1="${front_roller_radius}"
+                          x2="${front_upper_roller_x}" z2="${front_upper_roller_z}" r2="${front_upper_roller_radius}" s="-1"/>
 
-        <joint name="${side}_top_roller2${side}_back_top_belt" type="fixed">
-            <parent link="${side}_top_roller"/>
-            <child link="${side}_back_top_belt"/>
-            <origin xyz="-0.02 0.0 ${-back2top_length/2}" rpy="0 0 0" />
-        </joint>
+        <!-- Upper run: sprocket -> top roller -->
+        <xacro:track_belt name="${side}_back_top_belt" parent="${side}_top_roller"
+                          joint="${side}_top_roller2${side}_back_top_belt"
+                          px="${upper_roller_x}" pz="${upper_roller_z}"
+                          x1="${back_roller_x}" z1="${back_roller_z}" r1="${back_roller_radius}"
+                          x2="${upper_roller_x}" z2="${upper_roller_z}" r2="${upper_roller_radius}" s="1" inertial="false"/>
 
-
-
-        <link name="${side}_front_top_belt">
-            <visual>
-                <geometry>
-                    <box size="${top2front_upper_length} ${track_width} ${belt_thickness}"/>
-                </geometry>
-                <material name="black"/>                
-            </visual>        
-            <collision>
-                <geometry>
-                    <box size="${top2front_upper_length} ${track_width} ${belt_thickness}"/>
-                </geometry>
-                <material name="orange"/>                
-            </collision>        
-        </link>
+        <!-- Upper run: top roller -> front idler -->
+        <xacro:track_belt name="${side}_front_top_belt" parent="front_${side}_upper_roller"
+                          joint="front_${side}_upper_roller2${side}_front_top_belt"
+                          px="${front_upper_roller_x}" pz="${front_upper_roller_z}"
+                          x1="${upper_roller_x}" z1="${upper_roller_z}" r1="${upper_roller_radius}"
+                          x2="${front_upper_roller_x}" z2="${front_upper_roller_z}" r2="${front_upper_roller_radius}" s="1" inertial="false"/>
 
 
-        <joint name="front_${side}_upper_roller2${side}_front_top_belt" type="fixed">
-            <parent link="front_${side}_upper_roller"/>
-            <child link="${side}_front_top_belt"/>
-            <origin xyz="${top2front_upper_length/2} 0.0 ${belt_thickness/2 + 0.005}" rpy="0 ${-pi/9} 0" />
-        </joint>
-
-
-
-
+        <!-- Side cover, track frame and idler hubs (visual only) -->
         <link name="${side}_cover">
-            <visual name="cylinder_1">
-                <origin xyz="0 0 0" rpy="0 0 0"/>
-                <geometry>
-                    <cylinder radius="0.06" length="0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-            <visual name="cylinder_2">
-                <origin xyz="0.0 0.74 0" rpy="0 0 0"/>
-                <geometry>
-                    <cylinder radius="0.06" length="0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-
-            <visual name="cylinder_3">
-                <origin xyz="-0.25 0.35 0" rpy="0 0 0"/>
-                <geometry>
-                    <cylinder radius="0.045" length="0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-
-
-            <visual name="cylinder_4">
-                <origin xyz="-0.11 0.85 0" rpy="0 0 0"/>
-                <geometry>
-                    <cylinder radius="0.06" length="0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-            <visual name="box_2">
-                <origin xyz="-0.13 0.21 0" rpy="0 0 ${pi/5.3}"/>
-                <geometry>
-                    <box size="0.1 0.43 0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-
-
-            <visual name="box_4">
-                <origin xyz="-0.04 0.77 0" rpy="0 0 ${pi/4}"/>
-                <geometry>
-                    <box size="0.1 0.18 0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-
-            <visual name="box_5">
-                <origin xyz="-0.05 0.45 0" rpy="0 0 0.0"/>
-                <geometry>
-                    <box size="0.2 0.6 0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-
-            <visual name="box_6">
-                <origin xyz="-0.16 0.45 0" rpy="0 0 0.0"/>
-                <geometry>
-                    <box size="0.1 0.3 0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-
-            <visual name="box_3">
-                <origin xyz="-0.17 0.61 0" rpy="0 0 ${-pi/12}"/>
-                <geometry>
-                    <box size="0.09 0.5 0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
-            <visual name="box">
-                <origin xyz="0.0 0.35 0" rpy="0 0 0"/>
-                <geometry>
-                    <box size="0.1 0.74 0.02"/>
-                </geometry>
-                <material name="white"/>
-            </visual>
-
+            <xacro:cad_mesh file="cover_${side}.stl"       material="white"    x="${back_roller_x}" y="${sy*track_y}" z="${back_roller_z}"/>
+            <xacro:cad_mesh file="track_frame_${side}.stl" material="dark_gray" x="${back_roller_x}" y="${sy*track_y}" z="${back_roller_z}"/>
+            <xacro:cad_mesh file="hubs_${side}.stl"        material="aluminum" x="${back_roller_x}" y="${sy*track_y}" z="${back_roller_z}"/>
         </link>
-
 
         <joint name="back_${side}_roller2${side}_cover" type="fixed">
             <parent link="back_${side}_roller"/>
             <child link="${side}_cover"/>
-            <origin xyz="0.0 ${(track_width/2) * (1 if side == 'left' else -1)} 0.0" rpy="${pi/2} 0.0 0" />
+            <origin xyz="0 0 0" rpy="0 0 0"/>
         </joint>
 
 
-
-
-
-
-
-
-
-
-        <gazebo reference="base2back_${side}_roller">
-            <preserveFixedJoint>true</preserveFixedJoint>
-        </gazebo>
-
-
-        <gazebo>
-            <plugin filename="gz-sim-track-controller-system"
-                    name="gz::sim::systems::TrackController">
-                <link>back_${side}_roller</link>
-                <debug>0</debug>
-            </plugin>
-        </gazebo>
-
-        <gazebo reference="back_${side}_roller">
-            <self_collide>false</self_collide>
-        </gazebo>
-
-
-        <gazebo reference="back_${side}_roller2front_${side}_roller">
-            <preserveFixedJoint>true</preserveFixedJoint>
-        </gazebo>
-
-
-        <gazebo>
-            <plugin filename="gz-sim-track-controller-system"
-                    name="gz::sim::systems::TrackController">
-                <link>front_${side}_roller</link>
-                <debug>0</debug>
-            </plugin>
-        </gazebo>
-
-        <gazebo reference="front_${side}_roller">
-            <self_collide>false</self_collide>
-        </gazebo>
-
-
-
-
-        <gazebo reference="back_${side}_roller2${side}_bottom_belt">
-            <preserveFixedJoint>true</preserveFixedJoint>
-        </gazebo>
-
-
-        <gazebo>
-            <plugin filename="gz-sim-track-controller-system"
-                    name="gz::sim::systems::TrackController">
-                <link>${side}_bottom_belt</link>
-                <debug>0</debug>
-            </plugin>
-        </gazebo>
-
-        <gazebo reference="${side}_bottom_belt">
-            <self_collide>false</self_collide>
-        </gazebo>
-
-
-
-
-
-        <gazebo reference="back_${side}_roller2${side}_front_bottom_belt">
-            <preserveFixedJoint>true</preserveFixedJoint>
-        </gazebo>
-
-
-        <gazebo>
-            <plugin filename="gz-sim-track-controller-system"
-                    name="gz::sim::systems::TrackController">
-                <link>${side}_front_bottom_belt</link>
-                <debug>0</debug>
-            </plugin>
-        </gazebo>
-
-        <gazebo reference="${side}_front_bottom_belt">
-            <self_collide>false</self_collide>
-        </gazebo>
-
-
+        <!-- Moving track surfaces (must match the TrackedVehicle lists in jo_main.urdf.xacro) -->
+        <xacro:track_surface link="back_${side}_roller"         joint="base2back_${side}_roller"/>
+        <xacro:track_surface link="front_${side}_roller"        joint="back_${side}_roller2front_${side}_roller"/>
+        <xacro:track_surface link="${side}_bottom_belt"         joint="back_${side}_roller2${side}_bottom_belt"/>
+        <xacro:track_surface link="${side}_back_bottom_belt"    joint="back_${side}_roller2${side}_back_bottom_belt"/>
+        <xacro:track_surface link="${side}_front_bottom_belt"   joint="back_${side}_roller2${side}_front_bottom_belt"/>
 
 
         <!-- <gazebo reference="${side}_bottom_belt">
@@ -427,7 +225,7 @@
                         <ode>
                             <mu>100.0</mu>
                             <mu2>0.1</mu2>
-                            <fdir1>1 1 1</fdir1>  
+                            <fdir1>1 1 1</fdir1>
                             <slip1>0.0</slip1>
                             <slip2>0.0</slip2>
                         </ode>
@@ -442,11 +240,6 @@
                 </surface>
             </collision>
         </gazebo> -->
-
-
-
-        
-
 
     </xacro:macro>
 

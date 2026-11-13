@@ -31,6 +31,9 @@
             <left_track>
                 <link>left_front_bottom_belt</link>
             </left_track>
+            <left_track>
+                <link>left_back_bottom_belt</link>
+            </left_track>
             <!-- Right track links -->
             <right_track>
                 <link>right_bottom_belt</link>
@@ -44,11 +47,13 @@
             <right_track>
                 <link>right_front_bottom_belt</link>
             </right_track>
+            <right_track>
+                <link>right_back_bottom_belt</link>
+            </right_track>
 
 
-            <!-- ODOMETRY SEEMS TO NOT WORK FINE -->
             <!-- Distance between track centerlines -->
-            <tracks_separation>${chassis_width}</tracks_separation>
+            <tracks_separation>${track_separation}</tracks_separation>
             <!-- Used for odometry moment-arm calculation -->
             <track_height>${back_roller_radius*2}</track_height>
             <steering_efficiency>0.5</steering_efficiency>

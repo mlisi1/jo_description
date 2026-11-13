@@ -3,34 +3,70 @@
 
     <xacro:include filename="inertial_macros.xacro"/>
 
-    <xacro:property name="chassis_length" value="0.94"/>
-    <xacro:property name="chassis_width" value="0.39"/>
-    <xacro:property name="chassis_height" value="0.273"/>
+    <!-- ═══════════════════════════════════════════
+         GEOMETRY FROM CAD (AgileX_BUNKER_PRO_2_0.step)
+         CAD frame: origin on the ground, at the longitudinal centre of the
+         tracks, X forward, Z up. All CAD values below are in that frame.
+         base_link sits on the top deck of the body (under the 16x40 rails),
+         at the longitudinal centre of the upper shell. Everything mounted on
+         the robot (rack and sensors) is expressed w.r.t. base_link.
+    ═══════════════════════════════════════════ -->
+    <xacro:property name="cad2base_x" value="0.038"/>   <!-- upper shell spans x = -0.419 .. 0.495 -->
+    <xacro:property name="cad2base_z" value="0.454"/>   <!-- top deck height above ground -->
+
+    <!-- Upper shell (without front bumper) -->
+    <xacro:property name="chassis_length" value="0.914"/>
+    <xacro:property name="chassis_width" value="0.444"/>
+    <xacro:property name="chassis_height" value="0.334"/>  <!-- deck (z=0.454) to belly (z=0.120) -->
     <xacro:property name="chassis_mass" value="140.0"/>
 
-    <xacro:property name="front_chassis2rack" value="0.15"/>
+    <!-- Overall envelope (tracks included), used for the chassis inertia -->
+    <xacro:property name="robot_length" value="1.080"/>
+    <xacro:property name="robot_width" value="0.785"/>
+    <xacro:property name="robot_height" value="0.454"/>
+    <!-- Centre of mass (CAD 'CS_BARICENTRO') -->
+    <xacro:property name="com_x" value="-0.003"/>
+    <xacro:property name="com_z" value="0.242"/>
 
+    <!-- 16x40 top rails: top surface is rail_height above base_link -->
+    <xacro:property name="rail_height" value="0.016"/>
 
+    <!-- ═══════════════════════════════════════════
+         SENSORIZED PLATFORM (not part of the CAD)
+    ═══════════════════════════════════════════ -->
+    <!-- Rack centre w.r.t. base_link (manual measurement; kept as it was) -->
+    <xacro:property name="rack_x" value="0.02"/>
+    <xacro:property name="rack_z_offset" value="0.02"/>  <!-- rack bottom above the top deck -->
     <xacro:property name="rack_length" value="0.6"/>
     <xacro:property name="rack_width" value="0.37"/>
     <xacro:property name="rack_height" value="0.45"/>
-    <xacro:property name="rack_mass" value="0.0"/>
-
-    <!-- Lateral offset: center of track from robot centerline -->
-    <xacro:property name="track_offset_y" value="${chassis_width/2 + track_width/2}"/>
-    <!-- Z: bottom of chassis minus half track height = track center sits at ground level -->
-    <xacro:property name="track_offset_z" value="${-chassis_height/2 - track_height/2}"/>
-
-    <!-- Rack -->
     <xacro:property name="rack_mass" value="0.1"/>
 
-    <material name="white">  <color rgba="1 1 1 1"/>         </material>
-    <material name="orange"> <color rgba="1 0.3 0.1 1"/>     </material>
-    <material name="blue">   <color rgba="0.2 0.2 1 1"/>     </material>
-    <material name="black">  <color rgba="0 0 0 1"/>         </material>
-    <material name="black_t"><color rgba="0 0 0 0.9"/>       </material>
-    <material name="red">    <color rgba="1 0 0 1"/>         </material>
-    <material name="gray">    <color rgba="0.5 0.5 0.5 1"/>         </material>
+    <material name="white">      <color rgba="1 1 1 1"/>          </material>
+    <material name="light_gray"> <color rgba="0.88 0.89 0.9 1"/>  </material>
+    <material name="orange">     <color rgba="1 0.3 0.1 1"/>      </material>
+    <material name="blue">       <color rgba="0.2 0.2 1 1"/>      </material>
+    <material name="black">      <color rgba="0 0 0 1"/>          </material>
+    <material name="black_t">    <color rgba="0 0 0 0.9"/>        </material>
+    <material name="dark">       <color rgba="0.1 0.1 0.1 1"/>    </material>
+    <material name="dark_gray">  <color rgba="0.2 0.2 0.21 1"/>   </material>
+    <material name="aluminum">   <color rgba="0.78 0.8 0.83 1"/>  </material>
+    <material name="red">        <color rgba="1 0 0 1"/>          </material>
+    <material name="yellow">     <color rgba="0.95 0.8 0.05 1"/>  </material>
+    <material name="green">      <color rgba="0.1 0.65 0.2 1"/>   </material>
+    <material name="gray">       <color rgba="0.5 0.5 0.5 1"/>    </material>
+
+    <!-- Visual mesh exported in the CAD frame (see scripts/step_to_meshes.py).
+         x y z: position of the owning link expressed in the CAD frame. -->
+    <xacro:macro name="cad_mesh" params="file material x:=0 y:=0 z:=0">
+        <visual>
+            <origin xyz="${-x} ${-y} ${-z}" rpy="0 0 0"/>
+            <geometry>
+                <mesh filename="package://jo_description/meshes/${file}"/>
+            </geometry>
+            <material name="${material}"/>
+        </visual>
+    </xacro:macro>
 
     <!-- ═══════════════════════════════════════════
          BASE LINK
@@ -40,13 +76,15 @@
     <joint name="base_footprint_joint" type="fixed">
         <parent link="base_link"/>
         <child link="base_footprint"/>
-        <origin xyz="0 0 ${-chassis_height - 0.1}" rpy="0 0 0"/>
+        <origin xyz="0 0 ${-cad2base_z}" rpy="0 0 0"/>
     </joint>
     <link name="base_footprint"/>
 
     <!-- ═══════════════════════════════════════════
-         CHASSIS
+         CHASSIS (frame at the rear top edge of the upper shell)
     ═══════════════════════════════════════════ -->
+    <xacro:property name="chassis_cad_x" value="${cad2base_x - chassis_length/2}"/>
+
     <joint name="chassis_joint" type="fixed">
         <parent link="base_link"/>
         <child link="chassis"/>
@@ -54,29 +92,36 @@
     </joint>
 
     <link name="chassis">
-        <visual>
-            <origin xyz="${chassis_length/2} 0 ${-chassis_height/2}"/>
-            <geometry>
-                <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
-            </geometry>
-            <material name="white"/>
-        </visual>
+        <xacro:cad_mesh file="body.stl"           material="light_gray" x="${chassis_cad_x}" z="${cad2base_z}"/>
+        <xacro:cad_mesh file="body_sides.stl"     material="white"      x="${chassis_cad_x}" z="${cad2base_z}"/>
+        <xacro:cad_mesh file="body_dark.stl"      material="dark"       x="${chassis_cad_x}" z="${cad2base_z}"/>
+        <xacro:cad_mesh file="rails.stl"          material="aluminum"   x="${chassis_cad_x}" z="${cad2base_z}"/>
+        <xacro:cad_mesh file="estop.stl"          material="red"        x="${chassis_cad_x}" z="${cad2base_z}"/>
+        <xacro:cad_mesh file="estop_base.stl"     material="yellow"     x="${chassis_cad_x}" z="${cad2base_z}"/>
+        <xacro:cad_mesh file="panel_green.stl"    material="green"      x="${chassis_cad_x}" z="${cad2base_z}"/>
+
+        <!-- Upper shell + front bumper: CAD x = -0.419 .. 0.540, z = 0.280 .. 0.454 -->
         <collision>
-            <origin xyz="${chassis_length/2} 0 ${-chassis_height/2}"/>
+            <origin xyz="${(-0.419 + 0.540)/2 - chassis_cad_x} 0 ${(0.280 + 0.454)/2 - cad2base_z}"/>
             <geometry>
-                <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+                <box size="${0.540 + 0.419} ${chassis_width} ${0.454 - 0.280}"/>
             </geometry>
         </collision>
+        <!-- Lower shell: CAD x = -0.370 .. 0.420, y = +-0.194, z = 0.120 .. 0.280 -->
+        <collision>
+            <origin xyz="${(-0.370 + 0.420)/2 - chassis_cad_x} 0 ${(0.120 + 0.280)/2 - cad2base_z}"/>
+            <geometry>
+                <box size="${0.420 + 0.370} 0.388 ${0.280 - 0.120}"/>
+            </geometry>
+        </collision>
+
         <xacro:inertial_box mass="${chassis_mass}"
-                            x="${chassis_length}" y="${chassis_width}" z="${chassis_height}">
-            <origin xyz="${chassis_length/2} 0 ${-chassis_height/2}" rpy="0 0 0"/>
+                            x="${robot_length}" y="${robot_width}" z="${robot_height}">
+            <origin xyz="${com_x - chassis_cad_x} 0 ${com_z - cad2base_z}" rpy="0 0 0"/>
         </xacro:inertial_box>
     </link>
-    <gazebo reference="chassis">
-        <material>Gazebo/White</material>
-    </gazebo>
 
- 
+
 
     <!-- ═══════════════════════════════════════════
          RACK
@@ -84,7 +129,7 @@
     <joint name="base2rack" type="fixed">
         <parent link="base_link"/>
         <child link="rack"/>
-        <origin xyz="${-rack_length/2 - front_chassis2rack + chassis_length/2} 0 ${rack_height/2 + 0.02}"/>
+        <origin xyz="${rack_x} 0 ${rack_height/2 + rack_z_offset}"/>
     </joint>
 
     <link name="rack">
