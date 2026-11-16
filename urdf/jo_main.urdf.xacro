@@ -9,8 +9,7 @@
     <!-- <xacro:include filename="ros2_control.xacro" /> -->
 
     <xacro:include filename="velodyne.xacro" />
-    <xacro:include filename="front_depth.xacro" />
-    <xacro:include filename="back_depth.xacro" />
+    <xacro:include filename="d456.xacro" />
     <xacro:include filename="imu.xacro" />
 
     <!-- TrackedVehicle instantiation; the track links need to be instantiated separately -->

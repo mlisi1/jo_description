@@ -32,14 +32,16 @@
     <xacro:property name="rail_height" value="0.016"/>
 
     <!-- ═══════════════════════════════════════════
-         SENSORIZED PLATFORM (not part of the CAD)
+         SENSORIZED PLATFORM (BUNKER_PRO2_rack_sensori_ASSIEME_2.step)
+         Rack EWT-2406BK lying on the linear rails: CAD x = -0.205 .. 0.395,
+         y = +-0.185, z = 0.470 .. 0.920 (door with glass on top).
+         The IMU shelf, camera brackets and GoPro mounts are part of the rack link.
     ═══════════════════════════════════════════ -->
-    <!-- Rack centre w.r.t. base_link (manual measurement; kept as it was) -->
-    <xacro:property name="rack_x" value="0.02"/>
-    <xacro:property name="rack_z_offset" value="0.02"/>  <!-- rack bottom above the top deck -->
-    <xacro:property name="rack_length" value="0.6"/>
-    <xacro:property name="rack_width" value="0.37"/>
-    <xacro:property name="rack_height" value="0.45"/>
+    <xacro:property name="rack_cad_x" value="0.095"/>   <!-- rack centre, CAD frame -->
+    <xacro:property name="rack_cad_z" value="0.695"/>
+    <xacro:property name="rack_length" value="0.600"/>
+    <xacro:property name="rack_width" value="0.370"/>
+    <xacro:property name="rack_height" value="0.450"/>
     <xacro:property name="rack_mass" value="0.1"/>
 
     <material name="white">      <color rgba="1 1 1 1"/>          </material>
@@ -55,6 +57,8 @@
     <material name="yellow">     <color rgba="0.95 0.8 0.05 1"/>  </material>
     <material name="green">      <color rgba="0.1 0.65 0.2 1"/>   </material>
     <material name="gray">       <color rgba="0.5 0.5 0.5 1"/>    </material>
+    <material name="glass">      <color rgba="0.6 0.7 0.75 0.35"/> </material>
+    <material name="wood">       <color rgba="0.76 0.6 0.42 1"/>  </material>
 
     <!-- Visual mesh exported in the CAD frame (see scripts/step_to_meshes.py).
          x y z: position of the owning link expressed in the CAD frame. -->
@@ -129,17 +133,15 @@
     <joint name="base2rack" type="fixed">
         <parent link="base_link"/>
         <child link="rack"/>
-        <origin xyz="${rack_x} 0 ${rack_height/2 + rack_z_offset}"/>
+        <origin xyz="${rack_cad_x - cad2base_x} 0 ${rack_cad_z - cad2base_z}"/>
     </joint>
 
     <link name="rack">
-        <visual>
-            <origin xyz="0 0 0"/>
-            <geometry>
-                <box size="${rack_length} ${rack_width} ${rack_height}"/>
-            </geometry>
-            <material name="black_t"/>
-        </visual>
+        <xacro:cad_mesh file="rack.stl"       material="dark"  x="${rack_cad_x}" z="${rack_cad_z}"/>
+        <xacro:cad_mesh file="rack_glass.stl" material="glass" x="${rack_cad_x}" z="${rack_cad_z}"/>
+        <xacro:cad_mesh file="rack_red.stl"   material="red"   x="${rack_cad_x}" z="${rack_cad_z}"/>
+        <xacro:cad_mesh file="rack_label.stl" material="white" x="${rack_cad_x}" z="${rack_cad_z}"/>
+        <xacro:cad_mesh file="imu_shelf.stl"  material="wood"  x="${rack_cad_x}" z="${rack_cad_z}"/>
         <collision>
             <origin xyz="0 0 0"/>
             <geometry>

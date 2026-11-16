@@ -2,46 +2,41 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-    
-    <xacro:property name="PI" value="3.141592" />
-
-    <xacro:property name="b2l_x" value="0.03" />
-    <xacro:property name="b2l_y" value="0.0286" />
-    <xacro:property name="b2l_z" value="0.564" />
-    <xacro:property name="b2l_R" value="0.0" />
-    <xacro:property name="b2l_P" value="0.0" />
-    <xacro:property name="b2l_Y" value="0.0" />
-    <xacro:property name="lidar_mass" value="0.125" />
-    <xacro:property name="lidar_len_rad" value="0.07" />
-    <xacro:property name="lidar_len_h" value="0.072" />
     <xacro:include filename="$(find jo_description)/urdf/inertial_macros.xacro" />
-    
+
+    <!-- Velodyne VLP-16 (Puck Lite). Frame from CAD triad "TERNA - velodyne":
+         on the sensor axis, 37.7 mm above its base (optical centre), axes aligned
+         with base_link. CAD position: (0.289, 0, 1.0777). -->
+    <xacro:property name="lidar_cad_x" value="0.289" />
+    <xacro:property name="lidar_cad_y" value="0.0" />
+    <xacro:property name="lidar_cad_z" value="1.0777" />
+    <xacro:property name="lidar_mass" value="0.125" />
+    <xacro:property name="lidar_radius" value="0.0517" />
+    <xacro:property name="lidar_height" value="0.0726" />
+    <xacro:property name="lidar_base_to_origin" value="0.0377" />  <!-- sensor base to optical centre -->
+
     <xacro:macro name="lidar_sensor" params="namespace">
         <joint name="base2lidar" type="fixed">
             <parent link="base_link"/>
             <child link="velodyne"/>
-            <origin xyz="${b2l_x} ${b2l_y} ${b2l_z + lidar_len_h/2}" rpy="${b2l_R} ${b2l_P} ${b2l_Y}"/>
+            <origin xyz="${lidar_cad_x - cad2base_x} ${lidar_cad_y} ${lidar_cad_z - cad2base_z}" rpy="0 0 0"/>
         </joint>
         <link name="velodyne">
-            <collision>
-                <origin xyz="0 0 0" rpy="0 0 0"/>
+            <visual>
                 <geometry>
-                    <cylinder radius="${lidar_len_rad}" length="${lidar_len_h}"/>
+                    <mesh filename="package://jo_description/meshes/vlp16.stl"/>
+                </geometry>
+                <material name="aluminum"/>
+            </visual>
+            <collision>
+                <origin xyz="0 0 ${lidar_height/2 - lidar_base_to_origin}" rpy="0 0 0"/>
+                <geometry>
+                    <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
                 </geometry>
             </collision>
-
-            <visual>
-                <origin xyz="0 0 0" rpy="0 0 0"/>
-                <geometry>
-                    <cylinder radius="${lidar_len_rad}" length="${lidar_len_h}"/>
-                </geometry>
-                <material name="blue"/>
-            </visual>
-            
-            <xacro:inertial_cylinder mass="${lidar_mass}" radius="${lidar_len_rad}" length="${lidar_len_h}">
-                    <origin xyz="0 0 0" rpy="0 0 0"/>
+            <xacro:inertial_cylinder mass="${lidar_mass}" radius="${lidar_radius}" length="${lidar_height}">
+                <origin xyz="0 0 ${lidar_height/2 - lidar_base_to_origin}" rpy="0 0 0"/>
             </xacro:inertial_cylinder>
-            
         </link>
         <gazebo reference="velodyne">
             <sensor name="RGLsensor" type="custom">
@@ -60,22 +55,35 @@
         </gazebo>
 
 
+        <!-- Lidar support: two 40x40 profiles on the rack + 80x80 block and 45deg brackets.
+             Frame on the mounting surface under the lidar. -->
         <link name="velodyne_holder">
-            <visual>
-                <origin xyz="0 0 0" rpy="0 0 0"/>
+            <xacro:cad_mesh file="lidar_mount.stl"    material="dark"
+                            x="${lidar_cad_x}" y="${lidar_cad_y}" z="${lidar_cad_z - lidar_base_to_origin}"/>
+            <xacro:cad_mesh file="lidar_profiles.stl" material="aluminum"
+                            x="${lidar_cad_x}" y="${lidar_cad_y}" z="${lidar_cad_z - lidar_base_to_origin}"/>
+            <!-- 40x40 profiles: CAD x = -0.205 .. 0.370, y = +-0.0575, z = 0.920 .. 0.960 -->
+            <collision>
+                <origin xyz="${(-0.205 + 0.370)/2 - lidar_cad_x} 0 ${(0.920 + 0.960)/2 - (lidar_cad_z - lidar_base_to_origin)}"/>
                 <geometry>
-                    <box size="${lidar_len_rad*2} ${lidar_len_h*2} 0.09"/>
+                    <box size="${0.370 + 0.205} 0.115 0.040"/>
                 </geometry>
-                <material name="black"/>
-            </visual>
+            </collision>
+            <!-- 80x80 block: CAD x = 0.249 .. 0.329, y = +-0.0625, z = 0.960 .. 1.040 -->
+            <collision>
+                <origin xyz="${(0.249 + 0.329)/2 - lidar_cad_x} 0 ${(0.960 + 1.040)/2 - (lidar_cad_z - lidar_base_to_origin)}"/>
+                <geometry>
+                    <box size="0.080 0.125 0.080"/>
+                </geometry>
+            </collision>
         </link>
 
         <joint name="lidar2holder" type="fixed">
             <parent link="velodyne"/>
             <child link="velodyne_holder"/>
-            <origin xyz="0 0 ${-lidar_len_h/2 - 0.09/2}" rpy="0 0 0"/>
+            <origin xyz="0 0 ${-lidar_base_to_origin}" rpy="0 0 0"/>
         </joint>
-        
+
     </xacro:macro>
 
     <xacro:lidar_sensor namespace=""/>

@@ -32,15 +32,19 @@ ros2 launch jo_description description.launch.py use_rviz:=true
 
 ## Robot model
 
-The AgileX Bunker Pro 2.0 geometry (body, tracks, track collision shapes) comes from
-`AgileX_BUNKER_PRO_2_0.step`. The sensorized platform (rack, lidar, cameras, IMU) is not
-in the CAD and is expressed w.r.t. `base_link`.
+All geometry comes from `BUNKER_PRO2_rack_sensori_ASSIEME_2.step`: the AgileX Bunker Pro 2.0
+(body, tracks, track collision shapes), the rack EWT-2406BK and the sensors. Sensor frames
+come from the axis triads (`TERNA - *`) in the assembly.
 
-| Frame            | Where                                                                    |
-|------------------|--------------------------------------------------------------------------|
-| `base_link`      | top deck of the body (under the rails), longitudinal centre of the upper shell |
-| `base_footprint` | ground, 0.454 m below `base_link`                                        |
-| `chassis`        | rear top edge of the upper shell                                         |
+| Frame               | Where                                                                    |
+|---------------------|--------------------------------------------------------------------------|
+| `base_link`         | top deck of the body (under the rails), longitudinal centre of the upper shell |
+| `base_footprint`    | ground, 0.454 m below `base_link`                                        |
+| `chassis`           | rear top edge of the upper shell                                         |
+| `rack`              | centre of the rack                                                       |
+| `velodyne`          | VLP-16 optical centre (37.7 mm above its base)                           |
+| `imu_link`          | MTi-680G housing centre, X forward (as printed on the IMU; the CAD triad orientation is wrong) |
+| `front_camera_link`, `back_camera_link` | D456 `camera_link` convention: left IR imager (depth origin), X out of the lens |
 
 CAD values are kept in the CAD frame (origin on the ground at the longitudinal centre of
 the tracks) and converted with `cad2base_x` / `cad2base_z` in `urdf/robot_core.xacro`.
@@ -48,11 +52,13 @@ the tracks) and converted with `cad2base_x` / `cad2base_z` in `urdf/robot_core.x
 ### Regenerating the meshes
 
 ```bash
-python3 scripts/step_to_meshes.py AgileX_BUNKER_PRO_2_0.step meshes/
+pip install cadquery-ocp numpy trimesh fast_simplification
+python3 scripts/step_to_meshes.py BUNKER_PRO2_rack_sensori_ASSIEME_2.step meshes/
 ```
 
-Requires `numpy`, `shapely`, `trimesh` and `mapbox_earcut`. The script handles the planar
-faceted B-rep exported by this STEP file only.
+The script also prints the sensor frames w.r.t. `base_link`, to copy into the xacro files
+if the assembly changes. Robot and rack meshes are in the CAD frame; sensor meshes are in
+their sensor frame.
 
 ### Gazebo
 
@@ -65,7 +71,7 @@ environment hook that adds its `share` directory to `GZ_SIM_RESOURCE_PATH`.
  
 ```
 jo_description/
-├── AgileX_BUNKER_PRO_2_0.step              # Robot CAD (source of the meshes)
+├── BUNKER_PRO2_rack_sensori_ASSIEME_2.step # Robot + platform CAD (source of the meshes)
 ├── CMakeLists.txt
 ├── hooks
 │   └── jo_description.dsv.in               # GZ_SIM_RESOURCE_PATH hook
@@ -81,13 +87,12 @@ jo_description/
 ├── scripts
 │   └── step_to_meshes.py                   # STEP -> STL converter
 └── urdf
-    ├── back_depth.xacro                    # Simulated D455
-    ├── front_depth.xacro                   # Simulated D455
-    ├── imu.xacro                           # Simulated IMU
+    ├── d456.xacro                          # Simulated D456 (front and back)
+    ├── imu.xacro                           # Simulated IMU (MTi-680G)
     ├── inertial_macros.xacro              
     ├── jo_main.urdf.xacro                  # Main xacro file
-    ├── robot_core.xacro                    # Robot's body URDF + rack
+    ├── robot_core.xacro                    # Robot's body + rack
     ├── track.xacro                         # Tracks (geometry from CAD) + Gazebo track plugins
-    └── velodyne.xacro                      # Simulated lidar
+    └── velodyne.xacro                      # Simulated lidar (VLP-16) + its support
 
 ```

@@ -2,34 +2,34 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-    
-    <xacro:property name="PI" value="3.141592" />
-    <xacro:property name="b2i_x" value="0.22172" />
-    <xacro:property name="b2i_y" value="0.02606" />
-    <xacro:property name="b2i_z" value="0.28202" />
-    <xacro:property name="b2i_R" value="0.0" />
-    <xacro:property name="b2i_P" value="0.0" />
-    <xacro:property name="b2i_Y" value="0.0" />
-    <xacro:property name="imu_mass" value="0.01" />
-    <xacro:property name="imu_len_x" value="0.05" />
-    <xacro:property name="imu_len_y" value="0.05" />
-    <xacro:property name="imu_len_z" value="0.05" />
-    
     <xacro:include filename="$(find jo_description)/urdf/inertial_macros.xacro" />
-    
+
+    <!-- Xsens MTi-680G on the wooden shelf inside the rack. Position from CAD triad
+         "TERNA - imu_mti680g" (centre of the housing), CAD (0.2376, 0, 0.7024).
+         Orientation: the physical IMU is mounted with its printed X axis pointing
+         forward; the CAD triad (X to the robot's left) is wrong, so yaw is 0. -->
+    <xacro:property name="imu_cad_x" value="0.2376" />
+    <xacro:property name="imu_cad_y" value="0.0" />
+    <xacro:property name="imu_cad_z" value="0.7024" />
+    <xacro:property name="imu_yaw" value="0.0" />
+    <xacro:property name="imu_mass" value="0.01" />
+    <!-- housing (connectors included), in the IMU frame -->
+    <xacro:property name="imu_len_x" value="0.056" />
+    <xacro:property name="imu_len_y" value="0.041" />
+    <xacro:property name="imu_len_z" value="0.037" />
+
     <xacro:macro name="imu_sensor" params="">
         <joint name="base2imu" type="fixed">
             <parent link="base_link"/>
             <child link="imu_link"/>
-            <origin xyz="${b2i_x} ${b2i_y} ${b2i_z}" rpy="${b2i_R} ${b2i_P} ${b2i_Y}"/>
+            <origin xyz="${imu_cad_x - cad2base_x} ${imu_cad_y} ${imu_cad_z - cad2base_z}" rpy="0 0 ${imu_yaw}"/>
         </joint>
         <link name="imu_link">
             <visual>
                 <geometry>
-                    <box size="${imu_len_x} ${imu_len_y} ${imu_len_z}"/>
+                    <mesh filename="package://jo_description/meshes/mti680g.stl"/>
                 </geometry>
-                <material name="orange"/>
-                 
+                <material name="dark_gray"/>
             </visual>
 
             <collision>
@@ -37,11 +37,11 @@
                     <box size="${imu_len_x} ${imu_len_y} ${imu_len_z}"/>
                 </geometry>
             </collision>
-            
+
             <xacro:inertial_box mass="${imu_mass}" x="${imu_len_x}" y="${imu_len_y}" z="${imu_len_z}">
                     <origin xyz="0 0 0" rpy="0 0 0"/>
             </xacro:inertial_box>
-            
+
         </link>
         <gazebo reference="imu_link">
             <sensor name="imu_sensor" type="imu">
@@ -53,9 +53,9 @@
                     <plugin filename="gz-sim-imu-system"
                             name="gz::sim::systems::Imu">
                     </plugin>
-                    
+
                 </sensor>
-        </gazebo>       
+        </gazebo>
     </xacro:macro>
 
     <xacro:imu_sensor/>
