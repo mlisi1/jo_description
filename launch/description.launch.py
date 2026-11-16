@@ -40,7 +40,7 @@ def generate_launch_description():
     pkg_path = os.path.join(get_package_share_directory('jo_description'))
     xacro_file = os.path.join(pkg_path,'urdf','jo_main.urdf.xacro')
     robot_description_config = ParameterValue(
-        Command(['xacro ', xacro_file]),
+        Command(['xacro ', xacro_file, ' sim_noise:=', LaunchConfiguration('sim_noise')]),
         value_type=str
     )    
     # Create a robot_state_publisher node
@@ -60,6 +60,10 @@ def generate_launch_description():
             'use_sim_time',
             default_value='false',
             description='Use sim time if true'),
+        DeclareLaunchArgument(
+            'sim_noise',
+            default_value='true',
+            description='Simulated sensor noise (Gazebo only, no effect on the robot)'),
         DeclareLaunchArgument(
             'use_ros2_control',
             default_value='true',

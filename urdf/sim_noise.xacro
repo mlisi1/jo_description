@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!-- Simulated sensor noise (Gazebo only, ignored on the robot).
+     Switched by the xacro arg sim_noise (default true): with sim_noise:=false every stddev/bias is 0.
+     The lidar noise is added by jo_sim (the RGL plugin has no noise model). -->
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:arg name="sim_noise" default="true"/>
+
+    <xacro:property name="noise_k" value="0"/>
+    <xacro:if value="$(arg sim_noise)">
+        <xacro:property name="noise_k" value="1"/>
+    </xacro:if>
+
+    <!-- Xsens MTi-6x0 datasheet values, at the 200 Hz output rate:
+         gyro 0.007 deg/s/sqrt(Hz) -> 1.7e-3 rad/s, accel 60 ug/sqrt(Hz) -> 8.3e-3 m/s^2 -->
+    <xacro:property name="imu_gyro_stddev" value="1.7e-3"/>
+    <xacro:property name="imu_gyro_bias_stddev" value="4e-5"/>
+    <xacro:property name="imu_acc_stddev" value="8.3e-3"/>
+    <xacro:property name="imu_acc_bias_stddev" value="1e-3"/>
+    <!-- RealSense D456 colour image (normalized intensity) -->
+    <xacro:property name="camera_stddev" value="0.007"/>
+    <!-- GNSS with RTK: horizontal noise is applied in DEGREES by gz-sensors (1.8e-7 deg ~= 2 cm) -->
+    <xacro:property name="gnss_h_stddev_deg" value="1.8e-7"/>
+    <xacro:property name="gnss_v_stddev" value="0.04"/>
+
+    <xacro:macro name="gz_noise" params="stddev bias_stddev:=0">
+        <noise type="gaussian">
+            <mean>0</mean>
+            <stddev>${stddev * noise_k}</stddev>
+            <bias_mean>0</bias_mean>
+            <bias_stddev>${bias_stddev * noise_k}</bias_stddev>
+        </noise>
+    </xacro:macro>
+
+</robot>

@@ -50,11 +50,42 @@
                     <update_rate>200</update_rate>
                     <visualize>true</visualize>
                     <topic>imu</topic>
+                    <imu>
+                        <angular_velocity>
+                            <x><xacro:gz_noise stddev="${imu_gyro_stddev}" bias_stddev="${imu_gyro_bias_stddev}"/></x>
+                            <y><xacro:gz_noise stddev="${imu_gyro_stddev}" bias_stddev="${imu_gyro_bias_stddev}"/></y>
+                            <z><xacro:gz_noise stddev="${imu_gyro_stddev}" bias_stddev="${imu_gyro_bias_stddev}"/></z>
+                        </angular_velocity>
+                        <linear_acceleration>
+                            <x><xacro:gz_noise stddev="${imu_acc_stddev}" bias_stddev="${imu_acc_bias_stddev}"/></x>
+                            <y><xacro:gz_noise stddev="${imu_acc_stddev}" bias_stddev="${imu_acc_bias_stddev}"/></y>
+                            <z><xacro:gz_noise stddev="${imu_acc_stddev}" bias_stddev="${imu_acc_bias_stddev}"/></z>
+                        </linear_acceleration>
+                    </imu>
                     <plugin filename="gz-sim-imu-system"
                             name="gz::sim::systems::Imu">
                     </plugin>
 
                 </sensor>
+        </gazebo>
+        <!-- GNSS of the Xsens MTi: /gnss (NavSatFix), stamped in imu_link like the driver.
+             Needs <spherical_coordinates> in the world (added by jo_sim when missing). -->
+        <gazebo reference="imu_link">
+            <sensor name="gnss_sensor" type="navsat">
+                <gz_frame_id>imu_link</gz_frame_id>
+                <always_on>1</always_on>
+                <update_rate>10</update_rate>
+                <topic>gnss</topic>
+                <navsat>
+                    <position_sensing>
+                        <horizontal><xacro:gz_noise stddev="${gnss_h_stddev_deg}"/></horizontal>
+                        <vertical><xacro:gz_noise stddev="${gnss_v_stddev}"/></vertical>
+                    </position_sensing>
+                </navsat>
+                <plugin filename="gz-sim-navsat-system"
+                        name="gz::sim::systems::NavSat">
+                </plugin>
+            </sensor>
         </gazebo>
     </xacro:macro>
 
