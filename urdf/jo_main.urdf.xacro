@@ -56,7 +56,9 @@
             <tracks_separation>${track_separation}</tracks_separation>
             <!-- Used for odometry moment-arm calculation -->
             <track_height>${back_roller_radius*2}</track_height>
-            <steering_efficiency>0.5</steering_efficiency>
+            <!-- Calibrated in simulation against the ground truth (2026-11-17): 0.5 gave a yaw rate 1.41x
+                 the command on flat ground. With 0.707 the yaw rate matches the command. -->
+            <steering_efficiency>0.707</steering_efficiency>
             <linear_velocity>
                 <max_velocity>2.0</max_velocity>
                 <max_acceleration>5.0</max_acceleration>
